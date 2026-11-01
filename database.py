@@ -257,6 +257,9 @@ class DatabaseWorker(QObject):
     change_finished = Signal(str, object)  # 操作类型（update/delete）、book_id
     change_error = Signal(str)
 
+    page_ready = Signal(int, list, int)     # 成功信号：携带请求编号、当前页list[BookRecord]和筛选后的总记录数
+    page_error = Signal(int, str)           # 错误信号：带请求编号和错误信息
+
     def __init__(self, db_name='books_information.db'):
         super().__init__()
         self.db_name = db_name
@@ -295,12 +298,29 @@ class DatabaseWorker(QObject):
                 )
                 """
             )
+            self.connection.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_book_type
+                ON books_information(book_type)
+                """
+            )
+            self.connection.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_read_status
+                ON books_information(read_status)
+                """
+            )
+            self.connection.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_author
+                ON books_information(author)
+                """
+            )
             self.connection.commit()
         except sqlite3.Error as e:
             self._close_connection()
             self.query_error.emit(f"数据库初始化失败：{e}")
             return
-
         self.initialized.emit()
 
     def _close_connection(self):
@@ -389,6 +409,19 @@ class DatabaseWorker(QObject):
         )
         if books is not None:
             self.books_ready.emit(books)
+
+    @Slot(int, str, str, int, int, str)
+    def fetch_page(
+            self,
+            request_id: int,
+            filter_name: str,
+            filter_value: str,
+            offset: int,
+            limit: int,
+            view_type: str,
+    ) -> None:
+        """查询一页书籍；filter_name 为空字符串表示不筛选。"""
+
     
     def _book_name_exists(self, book_name: str) -> bool:
         """检查当前连接中是否已有同名书籍。"""
@@ -702,5 +735,8 @@ class DatabaseWorker(QObject):
 if __name__ == '__main__':
     worker = DatabaseWorker()
     worker.initialize()
-    result = worker._select_one("SELECT * FROM books_information WHERE book_name=?", ("test(1)",))
+    result = worker._select_one(
+        "SELECT * FROM books_information WHERE book_name=?",
+        ("test(1)",)
+    )
     print(result.book_id)

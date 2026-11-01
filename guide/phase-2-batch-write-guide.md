@@ -386,7 +386,7 @@ if self._scanning:
 
 self._scan_dialog = ScanBookFiles(self)
 self._scan_dialog.books_scanned.connect(
-    self._on_scan_books_found
+    self._on_books_found
 )
 self._scan_dialog.show()
 self._scan_dialog.select_directory()

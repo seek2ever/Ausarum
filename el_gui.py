@@ -493,11 +493,10 @@ class MainWindow(QMainWindow):
             return
 
         self._scan_dialog = ScanBookFiles()
-        self._scan_dialog.books_scanned.connect(self._on_scan_books_found)
-        # self._scan_dialog.show()
+        self._scan_dialog.books_scanned.connect(self._on_books_found)
         self._scan_dialog.select_directory()
 
-    def _on_scan_books_found(self, books: object) -> None:
+    def _on_books_found(self, books: object) -> None:
         """接收扫描器生成的记录，并在Worker中检查重复项。"""
         if not isinstance(books, list):
             self._on_write_error("扫描器返回的数据格式不正确。")

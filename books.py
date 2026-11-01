@@ -55,10 +55,8 @@ class ScanBookFiles(QWidget):
         #  os.path.expanduser("~") 表示打开用户的主目录
         scan_directory = QFileDialog.getExistingDirectory(self, "选择扫描路径", os.path.expanduser("~"))
         if scan_directory:
-            self.selected_directory_label.setText(scan_directory)  # 将用户选择的文件夹路径显示在标签控件上
             self.scan_book_files(scan_directory)  # 调用scan_book_files函数扫描文件夹中的电子书
         else:
-            QMessageBox.warning(self, "提示", "未选择扫描路径！扫描已取消。", QMessageBox.StandardButton.Ok)
             self.close()
 
     def scan_book_files(self, directory: str) -> None:

@@ -93,11 +93,26 @@ sequenceDiagram
     model->>view: dataChanged信号()<br/>通知视图数据已修改
     view->>model: on_table_data_changed()<br/>触发data()读取DisplayRole
     model->>view: 返回修改后的数据<br/>重新显示在单元格中
+```  
+## 扫描入库流程  
+主界面按下“扫描文件”按钮后，具体扫描入库过程如下：
+```mermaid
+sequenceDiagram
+    autonumber
+    participant m as MainWindow<br/>主线程
+    participant d as DatabaseWorker<br/>工作线程 
+    m ->>m: scan_button.clicked()
+    m ->>m: scan_books()
+    m ->>m: scan_book_files()
+    m ->>m: on_books_found()
+    m ->>d: find_batch_duplicates()
+    d ->>m: _on_duplicates_ready()
+    m ->>d: insert_books()
+    d ->>m: _on_write_finished()
+    m ->>d: fetch_all_books()
+    d ->>d: _select_all()
+    d ->>m: _on_books_loaded()
 ```
-## ScanBookFiles类中scan_book_files方法
-1. any_books_found = False，用于判断是否有新书被添加，若有则在最后返回True，否则返回False；使用if not any_books_found进行判断时，若any_books_found为False（即if not any_books_found的值为Ture）时，满足Python的真值测试（在Python中，if后面的条件为True时执行后面的代码，否则跳过）；
-2. GUI界面部件增加布局后，数据库中的数据可以正常显示；  
-3. 后台查询线程逻辑：创建新线程对象  
 # 常见问题
 
 ## 为什么不用Python的threading.Thread？  

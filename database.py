@@ -421,8 +421,77 @@ class DatabaseWorker(QObject):
             view_type: str,
     ) -> None:
         """查询一页书籍；filter_name 为空字符串表示不筛选。"""
+        if self.connection is None:
+            self.page_error.emit(request_id, "数据库连接未初始化，无法查询。")
+            return
 
-    
+        if not isinstance(offset, int) or offset <0:
+            self.page_error.emit(request_id, "分页偏移量必须是非负整数。")
+            return
+        if not isinstance(limit, int) or not 1 <= limit <= 200:
+            self.page_error.emit(request_id, "分页大小必须是 1~200 的整数。")
+            return
+
+        filter_columns = {
+            "type": "book_type",
+            "status": "read_status",
+            "author": "author",
+        }
+        if filter_name and filter_name not in filter_columns:
+            self.page_error.emit(request_id, f"不支持的筛选字段：{filter_name}")
+            return
+
+        if view_type == "list":
+            columns = BOOK_COLUMNS
+        elif view_type == "cover":
+            columns = (
+                "book_id",
+                "book_name",
+                "author",
+                "book_type",
+                "book_path",
+            )
+        else:
+            self.page_error.emit(request_id, f"不支持的视图类型：{view_type}")
+            return
+
+        where_sql = ""
+        filter_params: tuple = ()
+        if filter_name:
+            column = filter_columns[filter_name]
+            where_sql = f"WHERE {column} = ?"
+            filter_params = (filter_value,)
+
+        columns_sql = ", ".join(columns)
+        count_sql = f"SELECT COUNT(*) FROM books_information{where_sql}"
+        page_sql = (
+            f"SELECT {columns_sql} FROM books_information{where_sql} "
+            "ORDER BY book_id, rowid LIMIT ? OFFSET ?"
+        )
+
+        try:
+            total_count = self.connection.execute(
+                count_sql,
+                filter_params,
+            ).fetchone()[0]
+            cursor = self.connection.execute(
+                page_sql,
+                (*filter_params, limit, offset),
+            )
+            column_names = [description[0] for description in cursor.description]
+            books = [
+                BookRecord.from_mapping(dict(zip(column_names, row)))
+                for row in cursor.fetchall()
+            ]
+        except sqlite3.Error as error:
+            self.page_error.emit(request_id, f"分页查询失败：{error}")
+            return
+        except (TypeError, ValueError) as error:
+            self.page_error.emit(request_id, f"分页结果转换失败：{error}")
+            return
+
+        self.page_ready.emit(request_id, books, total_count)
+
     def _book_name_exists(self, book_name: str) -> bool:
         """检查当前连接中是否已有同名书籍。"""
         row = self.connection.execute(

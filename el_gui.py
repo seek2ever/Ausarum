@@ -58,6 +58,7 @@ class MainWindow(QMainWindow):
     request_insert_books = Signal(object, object)
     request_update_book = Signal(object, str, object)
     request_delete_book = Signal(object)
+    request_page = Signal(int, str, str, int, int, str)
 
     def __init__(self):
         super().__init__()
@@ -114,6 +115,8 @@ class MainWindow(QMainWindow):
         self._worker.write_error.connect(self._on_write_error)
         self._worker.change_finished.connect(self._on_change_finished)
         self._worker.change_error.connect(self._on_change_error)
+        # self._worker.page_ready.connect(self._on_page_ready)
+        # self._worker.page_error.connect(self._on_page_error)
 
         # 主线程信号 -> 工作线程槽函数
         self.request_initialize.connect(self._worker.initialize)

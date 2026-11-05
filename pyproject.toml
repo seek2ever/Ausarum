@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Ausarum（三木书斋）个人图书馆管理工具"
 readme = "README.md"
 authors = [
-    { name = "iOU0225", email = "170124.chris@gmail.com" }
+    { name = "Wang", email = "170124.chris@gmail.com" }
 ]
 requires-python = ">=3.12, <3.13"
 dependencies = [
@@ -41,16 +41,7 @@ dependencies = [
     "pycparser>=2.22",  # C 语言解析器（cffi 依赖）
     "future>=1.0.0",  # Python 2/3 兼容层（eel 依赖）
     "pyparsing>=3.2.3",  # 解析器库（eel 依赖）
-    "typing-extensions>=4.13.0",  # 类型注解扩展（eel 依赖）
-    # ==================== 杂项 / 遗留：代码里没有任何地方使用 ====================
-    "importlib-metadata>=7.1.0",  # 读取已安装包的元数据（旧版打包工具依赖，已基本弃用）
-    "zipp>=3.21.0",  # 操作 zip 文件的库（importlib-metadata 的依赖）
-    "click>=8.1.7",  # 命令行工具库（疑似遗留，无代码使用）
-    "colorama>=0.4.6",  # Windows 终端彩色输出（click 的依赖，无代码使用）
-    "pip>=26.2.1",  # Python 包管理器（不应作为项目依赖，纯遗留）
-    "pywin32>=312",  # Windows API 的 Python 封装（程序未使用）
-    "pypiwin32>=223",  # pywin32 的旧别名（已废弃，只是依赖 pywin32）
-    "pyrefly>=0.60.0",
+    "typing-extensions>=4.13.0",  # 类型注解扩展（eel 依赖）,
 ]
 [project.scripts]
 ausarum = "ausarum.app:main"

@@ -11,7 +11,7 @@ import os
 
 # ===== 配置 =====
 CODE_PATH = Path(__file__).resolve().parents[1] / "src" / "ausarum" / "app.py"
-OUTPUT_PATH = Path(r"C:\Users\Wang\Desktop\el_gui_code.pdf")
+OUTPUT_PATH = Path(r"C:\Users\Wang\Desktop\ausarum_app_code.pdf")
 
 # A4 页面尺寸 (points)
 PAGE_W, PAGE_H = 595, 842
@@ -128,7 +128,7 @@ def make_page(doc, subtitle="app.py"):
     # 页眉文字
     page.insert_text(
         (MARGIN_LEFT, 24),
-        f"{subtitle}  -  Eternity Library",
+        f"{subtitle}  -  Ausarum",
         **text_kw(fontsize=11, color=HEADER_TEXT),
     )
     return page

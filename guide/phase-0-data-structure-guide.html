@@ -66,7 +66,7 @@
 
 <section class="cover">
   <h1>阶段 0：统一书籍数据结构</h1>
-  <div class="subtitle">Eternity-Library 数据库线程化重构的第一步</div>
+  <div class="subtitle">Ausarum 数据库线程化重构的第一步</div>
   <p>本教程不进行线程重构，也不改变数据库读写职责。我们先解决一个更基础、也更容易被忽略的问题：数据库返回的是元组，表格模型把它变成列表，封面模型又按元组下标读取，多个模块对“一本书长什么样”没有统一约定。</p>
   <div class="notice"><b>本次操作范围：</b>你将手动新增 <code>book_record.py</code>，然后手动修改两个 Model 和部分查询代码。本文只提供步骤和可运行代码，我不会直接修改项目源码。</div>
   <div class="meta">
@@ -140,7 +140,7 @@
 <h2>3. 第一步：新增 book_record.py</h2>
 <div class="step">
   <div class="step-title">操作 1：在项目根目录新建文件</div>
-  <p>在 <code>D:\Eternity-Library</code> 下新建文件，文件名必须是：</p>
+  <p>在 <code>D:\Ausarum</code> 下新建文件，文件名必须是：</p>
   <pre>book_record.py</pre>
   <p>将下面的完整代码复制进去并保存。这个文件是可以直接运行的 Python 代码，不是伪代码。</p>
 </div>
@@ -281,7 +281,7 @@ def rows_to_records(rows: Iterable[Sequence[Any]]) -> list[BookRecord]:
 <div class="step">
   <div class="step-title">操作 2：先单独运行这个文件</div>
   <p>打开 PowerShell，进入项目目录，执行：</p>
-  <pre>cd D:\Eternity-Library
+  <pre>cd D:\Ausarum
 python -c "from book_record import BookRecord, BOOK_COLUMNS; book = BookRecord(book_name='测试书'); print(book.book_name); print(len(BOOK_COLUMNS)); print(book.to_mapping())"</pre>
   <p>预期结果中应出现 <code>测试书</code>、数字 <code>19</code>，以及一个包含 19 个字段的字典。没有错误信息就说明基础数据结构可以导入。</p>
 </div>
@@ -445,7 +445,7 @@ elif role == self.BookTypeRole:
 <p>当前 <code>MainWindow.__init__</code> 创建了一个临时的 <code>BookQueryWorker</code>，并调用同步的 <code>column_titles_translation()</code> 获取表头。阶段 0 可以先把表头移到统一模块，避免为了 19 个固定文字额外打开一次数据库连接。</p>
 
 <div class="step">
-  <div class="step-title">操作 10：修改 el_gui.py 的 import</div>
+  <div class="step-title">操作 10：修改 app.py 的 import</div>
   <p>在 import 区域加入：</p>
   <pre>from book_record import BOOK_COLUMN_TITLES</pre>
 </div>
@@ -467,7 +467,7 @@ self.column_titles = self.db.column_titles_translation()</pre>
 
 <div class="step">
   <div class="step-title">操作 12：替换 _on_books_loaded</div>
-  <p>在 <code>el_gui.py</code> 中，将现有方法替换为：</p>
+  <p>在 <code>app.py</code> 中，将现有方法替换为：</p>
   <pre>def _on_books_loaded(self, books: list[BookRecord]) -> None:
     """收到后台查询结果，在主线程更新缓存和两个 Model。"""
     self._books_cache = books
@@ -485,7 +485,7 @@ self.column_titles = self.db.column_titles_translation()</pre>
     else:
         message = self._translate("Views", "数据库中暂无书籍")
     self.statusbar.showMessage(message)</pre>
-  <p>同时，在 el_gui.py 的 import 区域加入：</p>
+  <p>同时，在 app.py 的 import 区域加入：</p>
   <pre>from book_record import BookRecord</pre>
 </div>
 
@@ -583,7 +583,7 @@ if __name__ == "__main__":
 
 <div class="step">
   <div class="step-title">操作 15：运行验证脚本</div>
-  <pre>cd D:\Eternity-Library
+  <pre>cd D:\Ausarum
 python verify_phase0.py</pre>
   <p>如果数据库尚未创建，脚本会提示数据库或表不存在。这不是数据结构代码错误；先运行一次原项目，让它创建 <code>books_information.db</code> 和 <code>books_information</code> 表，再重新运行验证脚本。</p>
 </div>
@@ -593,7 +593,7 @@ python verify_phase0.py</pre>
 <ol>
   <li>运行 <code>python -c "from book_record import BookRecord; print(BookRecord(book_name='ok'))"</code>。</li>
   <li>运行 <code>python verify_phase0.py</code>。</li>
-  <li>启动 <code>python el_gui.py</code>，确认窗口能打开。</li>
+  <li>启动 <code>uv run ausarum</code>，确认窗口能打开。</li>
   <li>确认表格模式的中文表头仍然显示。</li>
   <li>确认数据库有书籍时，封面模式可以显示书名、作者和类型。</li>
   <li>确认数据库为空时，界面不会保留上一次旧数据。</li>
@@ -603,7 +603,7 @@ python verify_phase0.py</pre>
 <h3>出现错误时如何判断</h3>
 <table>
   <tr><th>错误现象</th><th>优先检查</th></tr>
-  <tr><td><code>ModuleNotFoundError: book_record</code></td><td><code>book_record.py</code> 是否在项目根目录，运行命令是否位于 <code>D:\Eternity-Library</code>。</td></tr>
+  <tr><td><code>ModuleNotFoundError: book_record</code></td><td><code>book_record.py</code> 是否在项目根目录，运行命令是否位于 <code>D:\Ausarum</code>。</td></tr>
   <tr><td>字段数量不是 19</td><td>数据库表是否是旧版本；查询是否仍然是 <code>SELECT *</code>；<code>CREATE TABLE</code> 是否被手动改过。</td></tr>
   <tr><td><code>BookRecord.from_row</code> 报字段数量错误</td><td>查询列数量和 <code>BOOK_COLUMNS</code> 不一致。检查是否只查询了部分列却仍调用 <code>from_row</code>。</td></tr>
   <tr><td>表头数量或索引错误</td><td><code>BOOK_COLUMNS</code> 与 <code>BOOK_COLUMN_TITLES</code> 是否一一对应。</td></tr>
@@ -638,6 +638,6 @@ python verify_phase0.py</pre>
 
 <div class="success"><b>学习重点：</b>阶段 0 不是“为了增加一个文件而增加一个文件”，而是在建立项目中的共同语言。以后看到 <code>BookRecord</code>，就知道它代表一条完整书籍记录；看到 <code>list[BookRecord]</code>，就知道这是可以传递给界面 Model 的书籍列表。</div>
 
-<div class="footer">Eternity-Library guide · 阶段 0：统一书籍数据结构 · 本文只提供手动实施步骤，不修改项目源码</div>
+<div class="footer">Ausarum guide · 阶段 0：统一书籍数据结构 · 本文只提供手动实施步骤，不修改项目源码</div>
 </body>
 </html>

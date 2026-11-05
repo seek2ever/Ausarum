@@ -4,7 +4,7 @@
 
 阶段 3 把其余修改操作也迁入同一个 Worker。本项目当前没有已经接入数据库的删除按钮或编辑保存流程：表格模型允许直接修改内存数据，`on_table_data_changed()` 目前只打印；旧 `DatabaseManager` 定义了主线程增删改方法，但目前没有被 `MainWindow` 或 `books.py` 实例化。`pdf.py` 仍会创建 `DatabaseManager` 读取书籍路径，因此本阶段不能直接删除整个旧类。本指南会一并接通表格编辑保存和一个选中行删除入口，并保留旧类供这个尚未迁移的 PDF 查询使用。
 
-> 本文代码按当前 `database.py`、`el_gui.py`、`table_model.py`、`book_record.py` 和阶段 2 验证脚本编写，代码块均为可直接粘贴的实现片段。不要让旧 `DatabaseManager` 和 `DatabaseWorker` 同时处理同一项修改。
+> 本文代码按当前 `database.py`、`app.py`、`table_model.py`、`book_record.py` 和阶段 2 验证脚本编写，代码块均为可直接粘贴的实现片段。不要让旧 `DatabaseManager` 和 `DatabaseWorker` 同时处理同一项修改。
 
 ## 1. 阶段目标与边界
 
@@ -243,7 +243,7 @@ def delete_book_by_id(self, book_id: int) -> None:
 
 这里的 `BOOK_ID_INDEX` 已在 `table_model.py` 顶部定义为 `0`。`setData()` 与 `flags()` 都检查 ID 列：前者是实际写入保护，后者是界面可编辑状态。
 
-## 5. 修改 `el_gui.py`：连接 Worker 请求和结果
+## 5. 修改 `app.py`：连接 Worker 请求和结果
 
 ### 5.1 导入列名常量
 
@@ -464,7 +464,7 @@ def _on_mutation_error(self, error_msg: str) -> None:
 
 ## 9. 清理旧 `DatabaseManager`
 
-当前 `el_gui.py` 已只导入 `DatabaseWorker`，扫描器也只发送 `BookRecord`；但 `pdf.py:get_pdf_path()` 仍会创建 `DatabaseManager` 并调用 `get_book()`。因此本阶段不要删除整个 `DatabaseManager` 类，也不要删除 PDF 仍在使用的查询方法。
+当前 `app.py` 已只导入 `DatabaseWorker`，扫描器也只发送 `BookRecord`；但 `pdf.py:get_pdf_path()` 仍会创建 `DatabaseManager` 并调用 `get_book()`。因此本阶段不要删除整个 `DatabaseManager` 类，也不要删除 PDF 仍在使用的查询方法。
 
 本阶段应确认 `MainWindow`、扫描器及其他新增 UI 流程不再实例化 `DatabaseManager` 或调用其写方法。对 `DatabaseManager`、`handle_duplicate_book`、`add_book_result`、`update_book(` 和 `delete_book(` 做项目搜索；若写方法还有调用方，先迁移到 Worker 请求信号，不要直接删除仍被调用的 API。旧类及其只读连接的最终清理由总架构指南阶段 5 处理：先将 `pdf.py` 的路径查询迁入 Worker，再确认无调用方后删除 `DatabaseManager` 和旧类型导入。
 
@@ -706,13 +706,13 @@ if __name__ == "__main__":
 从项目根目录运行：
 
 ```powershell
-python -m py_compile database.py el_gui.py table_model.py verify_phase1.py verify_phase2.py verify_phase3.py
+uv run python -m compileall src/ausarum tests
 python verify_phase1.py
 python verify_phase2.py
 python verify_phase3.py
 ```
 
-预期三个验证脚本分别输出阶段 1、阶段 2 和阶段 3 检查通过。随后运行 `python el_gui.py` 手工检查：
+预期三个验证脚本分别输出阶段 1、阶段 2 和阶段 3 检查通过。随后运行 `uv run ausarum` 手工检查：
 
 1. 在表格视图编辑书名、作者、页数、阅读时长等字段，完成后数据库值仍存在；切换封面/表格视图后两个 Model 显示相同数据。
 2. 尝试把书名改为另一本书的书名，确认出现明确错误，原书名恢复，其他记录不受影响。

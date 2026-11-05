@@ -45,11 +45,11 @@
 <body>
 
 <h1>阶段 1：统一数据库读取工作线程</h1>
-<p><b>适用项目：</b>Eternity-Library（三木书斋）　<b>前置条件：</b>阶段 0 已完成</p>
+<p><b>适用项目：</b>Ausarum（三木书斋）　<b>前置条件：</b>阶段 0 已完成</p>
 
 <div class="notice">
   <b>本指南的代码可以直接粘贴。</b>代码按当前仓库的 <code>book_record.py</code>、
-  <code>database.py</code>、<code>el_gui.py</code> 组织方式编写，不是伪代码。本文只迁移
+  <code>database.py</code>、<code>app.py</code> 组织方式编写，不是伪代码。本文只迁移
   “读取”操作；扫描入库仍暂时使用主线程中的 <code>DatabaseManager</code>，这是阶段 1
   的明确过渡边界。不要在本阶段删除 <code>DatabaseManager</code>。
 </div>
@@ -63,7 +63,7 @@
   <tr><th>文件</th><th>阶段 1 的处理</th></tr>
   <tr><td><code>book_record.py</code></td><td>保持不变，继续作为查询结果的统一数据结构。</td></tr>
   <tr><td><code>database.py</code></td><td>保留 <code>DatabaseManager</code>；新增并使用 <code>DatabaseWorker</code>。</td></tr>
-  <tr><td><code>el_gui.py</code></td><td>移除 <code>BookQueryWorker</code> 的使用，改为统一 Worker 和请求信号。</td></tr>
+  <tr><td><code>app.py</code></td><td>移除 <code>BookQueryWorker</code> 的使用，改为统一 Worker 和请求信号。</td></tr>
   <tr><td><code>books.py</code></td><td>本阶段保持不变，仍由 <code>DatabaseManager</code> 负责写入。</td></tr>
   <tr><td><code>verify_phase1.py</code></td><td>新增读取 Worker 的独立验证脚本。</td></tr>
 </table>
@@ -221,13 +221,13 @@
 
 <div class="warning"><b>必须删除或停用旧的 BookQueryWorker 使用处。</b>为了避免同一个文件里
 同时维护两套查询 Worker，本阶段完成后可以删除旧的 <code>BookQueryWorker</code> 类；
-如果希望保留历史代码，也必须确保 <code>el_gui.py</code> 不再导入或实例化它。</div>
+如果希望保留历史代码，也必须确保 <code>app.py</code> 不再导入或实例化它。</div>
 <p>如果删除了旧类，还要把 <code>database.py</code> 文件末尾原来的测试入口一并替换为
 下面内容，避免入口继续引用已删除的类：</p>
 <pre>if __name__ == "__main__":
-    print("DatabaseWorker 已定义，可由 el_gui.py 创建线程后使用。")</pre>
+    print("DatabaseWorker 已定义，可由 app.py 创建线程后使用。")</pre>
 
-<h2>3. 第二步：修改 el_gui.py 的导入和请求信号</h2>
+<h2>3. 第二步：修改 app.py 的导入和请求信号</h2>
 <p>把原来的：</p>
 <pre>from PySide6.QtCore import (
     QCoreApplication,
@@ -249,7 +249,7 @@
     DatabaseManager,
     DatabaseWorker,
 )</pre>
-<p>阶段 1 的 <code>el_gui.py</code> 不再需要导入 <code>BookQueryWorker</code>。</p>
+<p>阶段 1 的 <code>app.py</code> 不再需要导入 <code>BookQueryWorker</code>。</p>
 
 <p>在 <code>MainWindow</code> 类声明的第一行后面加入下面四个信号。它们是
 “主线程发给 Worker 的请求”，不是数据库结果：</p>
@@ -406,7 +406,7 @@ SQLite 正在读取的中间状态，也会留下连接或资源没有释放。<
 <p>完成上面的替换后，按下面清单检查旧调用。阶段 1 不需要删除写入类：</p>
 <table>
   <tr><th>代码</th><th>处理</th></tr>
-  <tr><td><code>BookQueryWorker</code></td><td>删除类或至少从 <code>el_gui.py</code> 移除所有导入和实例化。</td></tr>
+  <tr><td><code>BookQueryWorker</code></td><td>删除类或至少从 <code>app.py</code> 移除所有导入和实例化。</td></tr>
   <tr><td><code>self._query_thread</code></td><td>替换为 <code>self._database_thread</code>。</td></tr>
   <tr><td><code>self._book_worker</code></td><td>替换为 <code>self._database_worker</code>。</td></tr>
   <tr><td><code>DatabaseManager</code></td><td>保留。阶段 1 的 <code>books.py</code> 仍通过它写入。</td></tr>
@@ -550,9 +550,9 @@ if __name__ == "__main__":
 
 <h2>10. 验证顺序</h2>
 <ol>
-  <li>在项目根目录运行 <code>python -m py_compile database.py el_gui.py verify_phase1.py</code>。</li>
+  <li>在项目根目录运行 <code>uv run python -m compileall src/ausarum tests</code>。</li>
   <li>运行 <code>python verify_phase1.py</code>，应输出“阶段 1 DatabaseWorker 检查全部通过”。</li>
-  <li>运行 <code>python el_gui.py</code>，确认窗口可以打开，空数据库显示空状态。</li>
+  <li>运行 <code>uv run ausarum</code>，确认窗口可以打开，空数据库显示空状态。</li>
   <li>在表格和封面视图之间切换，确认两者都由同一批 <code>BookRecord</code> 更新。</li>
   <li>扫描功能仍然使用旧写入流程时，确认扫描结果没有回归；这一步属于阶段 1 的过渡验证。</li>
   <li>关闭窗口，确认没有 <code>QThread: Destroyed while thread is still running</code> 警告。</li>
@@ -561,7 +561,7 @@ if __name__ == "__main__":
 <h3>常见错误定位</h3>
 <table>
   <tr><th>现象</th><th>检查点</th></tr>
-  <tr><td><code>DatabaseWorker is not defined</code></td><td><code>database.py</code> 的类是否已粘贴，<code>el_gui.py</code> 的导入是否正确。</td></tr>
+  <tr><td><code>DatabaseWorker is not defined</code></td><td><code>database.py</code> 的类是否已粘贴，<code>app.py</code> 的导入是否正确。</td></tr>
   <tr><td>启动时提示“数据库尚未初始化”</td><td>是否在 <code>initialized</code> 信号之后才发出查询；不要在 <code>thread.start()</code> 后直接调用 Worker 方法。</td></tr>
   <tr><td>窗口关闭仍有线程警告</td><td>是否连接了 <code>database_closed → thread.quit</code>，并在 <code>closeEvent</code> 中调用了 <code>wait</code>。</td></tr>
   <tr><td>筛选结果显示旧数据</td><td>筛选请求是否通过 <code>request_fetch_*</code> 信号发出，是否仍命中了全部书籍缓存。</td></tr>
@@ -588,6 +588,6 @@ if __name__ == "__main__":
 Worker 在线程内开启一个事务，统一处理重复策略、插入、提交或回滚，完成后发出
 变更结果信号。这样可以在不破坏阶段 1 读取边界的情况下迁移写入。</p>
 
-<div class="footer">Eternity-Library guide · 阶段 1：统一数据库读取工作线程 · 代码按当前项目结构编写</div>
+<div class="footer">Ausarum guide · 阶段 1：统一数据库读取工作线程 · 代码按当前项目结构编写</div>
 </body>
 </html>

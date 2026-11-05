@@ -2,9 +2,9 @@
 
 > 当前决定暂缓分页重构，保留现有的全量查询和封面视图滚动模式。本文中的分页接口、翻页状态和过期请求处理属于后续性能优化，不作为当前阶段的已完成代码要求。
 
-**适用项目：** Eternity-Library（三木书斋）  
+**适用项目：** Ausarum（三木书斋）  
 **前置条件：** 阶段 0–3 的数据库读取、批量写入、更新和删除流程已经通过验证。  
-**涉及文件：** `database.py`、`el_gui.py`、`table_model.py`、`cover_model.py`、`verify_phase4.py`
+**涉及文件：** `database.py`、`app.py`、`table_model.py`、`cover_model.py`、`verify_phase4.py`
 
 > 本文是实施指南，不要求一次完成所有优化。阶段 4 只处理查询、结果传输和界面刷新性能，不直接修改扫描、重复书籍处理、更新或删除的业务规则，也不新增数据库线程。
 
@@ -169,7 +169,7 @@ page_error = Signal(int, str)
 
 ### 5.3 从 `MainWindow` 发起请求
 
-在 `el_gui.py` 的 `MainWindow` 信号声明区增加请求信号：
+在 `app.py` 的 `MainWindow` 信号声明区增加请求信号：
 
 ```python
 request_page = Signal(int, str, str, int, int, str)

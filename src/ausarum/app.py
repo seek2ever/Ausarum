@@ -137,7 +137,7 @@ class MainWindow(QMainWindow):
     def setup_ui(self):
         # 设置窗口属性
         self.setObjectName("main_window")
-        self.setWindowTitle(self._translate("Eternity Library", "三木书斋"))
+        self.setWindowTitle(self._translate("Ausarum", "三木书斋"))
         self.setGeometry(120, 140, 1080, 620)
         self.setWindowOpacity(1)
 

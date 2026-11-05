@@ -58,4 +58,5 @@ ausarum = "ausarum.app:main"
 [build-system]
 requires = ["uv_build>=0.12.7,<0.13.0"]
 build-backend = "uv_build"
-url = "https://pypi.tuna.tsinghua.edu.cn/simple/"
+# 注意：这里只能写 requires 和 build-backend。
+# 如果需要国内镜像，请改用 [[tool.uv.index]] 或全局 uv 配置，不要写在本节里。

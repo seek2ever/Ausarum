@@ -4,7 +4,7 @@
 
 目标是：扫描窗口只产生 `list[BookRecord]`；主线程把批次交给 `DatabaseWorker`；Worker 在自己的线程中完成重复检查和一个事务内的批量写入；成功后主线程使缓存失效并刷新两个 Model。Worker 不访问任何 Widget，也不把 SQLite 连接、游标或异常对象传回主线程。
 
-> 以下代码是按项目当前 `database.py`、`books.py` 和 `el_gui.py` 编写的可直接粘贴实现，不是伪代码。按步骤粘贴；不要把旧的 `DatabaseManager` 写入和新 Worker 写入同时用于扫描流程。
+> 以下代码是按项目当前 `database.py`、`books.py` 和 `app.py` 编写的可直接粘贴实现，不是伪代码。按步骤粘贴；不要把旧的 `DatabaseManager` 写入和新 Worker 写入同时用于扫描流程。
 
 ## 1. 阶段边界与重复书籍规则
 
@@ -293,7 +293,7 @@ from book_record import BookRecord
 
 扫描器仍然在主线程同步遍历目录；本阶段只把 SQLite 写入移出主线程。每个批次扫描一个目录，批次入库完成后再询问是否扫描下一个目录，避免写入尚未完成时第二批覆盖第一批的待处理状态。把大型目录扫描本身改成后台任务属于后续独立优化，不在阶段 2 引入第二个线程。
 
-## 4. 修改 `el_gui.py`：连接扫描信号与 Worker
+## 4. 修改 `app.py`：连接扫描信号与 Worker
 
 ### 4.1 增加请求信号
 
@@ -519,7 +519,7 @@ def _finish_scan_batch(self) -> None:
 
 ### 4.5 清理旧导入
 
-`el_gui.py` 顶部把数据库导入改为：
+`app.py` 顶部把数据库导入改为：
 
 ```python
 from database import DatabaseWorker
@@ -759,7 +759,7 @@ if __name__ == "__main__":
 在项目根目录执行：
 
 ```powershell
-python -m py_compile database.py books.py el_gui.py verify_phase1.py verify_phase2.py
+uv run python -m compileall src/ausarum tests
 python verify_phase1.py
 python verify_phase2.py
 ```
@@ -770,7 +770,7 @@ python verify_phase2.py
 - 阶段 2 检查输出 `阶段 2 批量写入检查全部通过`。
 - 编译命令没有语法错误。
 
-随后运行 `python el_gui.py`，手工检查：
+随后运行 `uv run ausarum`，手工检查：
 
 1. 扫描仅包含新书的目录，成功后封面和表格都出现新书。
 2. 再次扫描同一目录，对重复项分别选择覆盖、重命名、跳过，确认状态栏统计和最终数据正确。

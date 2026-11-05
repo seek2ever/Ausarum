@@ -28,3 +28,6 @@ ui_files/
 
 # Claude Code config
 .claude/
+
+# 改名前的配置备份
+.backup-ausarum/

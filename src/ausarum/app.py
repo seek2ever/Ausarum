@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 import time
+from pathlib import Path
 
 from PySide6 import QtGui
 from PySide6.QtCore import (
@@ -31,20 +32,20 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from books import ScanBookFiles
-from database import (
+from .books import ScanBookFiles
+from .database import (
     DatabaseWorker,
 )
-from utils import Tips
-from book_record import (
+from .utils import Tips
+from .book_record import (
     BOOK_COLUMNS,
     BOOK_COLUMN_TITLES,
     BookRecord,
 )
-from cover_model import CoverCardModel
-from cover_delegate import CoverCardDelegate
-from table_model import BookTableModel
-from table_delegate import TableDelegate
+from .cover_model import CoverCardModel
+from .cover_delegate import CoverCardDelegate
+from .table_model import BookTableModel
+from .table_delegate import TableDelegate
 
 
 class MainWindow(QMainWindow):
@@ -58,7 +59,6 @@ class MainWindow(QMainWindow):
     request_insert_books = Signal(object, object)
     request_update_book = Signal(object, str, object)
     request_delete_book = Signal(object)
-    request_page = Signal(int, str, str, int, int, str)
 
     def __init__(self):
         super().__init__()
@@ -115,8 +115,6 @@ class MainWindow(QMainWindow):
         self._worker.write_error.connect(self._on_write_error)
         self._worker.change_finished.connect(self._on_change_finished)
         self._worker.change_error.connect(self._on_change_error)
-        # self._worker.page_ready.connect(self._on_page_ready)
-        # self._worker.page_error.connect(self._on_page_error)
 
         # 主线程信号 -> 工作线程槽函数
         self.request_initialize.connect(self._worker.initialize)
@@ -146,7 +144,9 @@ class MainWindow(QMainWindow):
         # 设置窗口图标
         icon = QtGui.QIcon()
         icon.addPixmap(
-            QtGui.QPixmap("images/icons/book_icon.png"),
+            QtGui.QPixmap(
+                str(Path(__file__).resolve().parent / "icons" / "book_icon.png")
+            ),
             QtGui.QIcon.Mode.Normal,
             QtGui.QIcon.State.Off
         )
@@ -625,8 +625,12 @@ class MainWindow(QMainWindow):
         return QCoreApplication.translate(context, text)
 
 
-if __name__ == '__main__':
+def main() -> None:
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
+
+
+if __name__ == '__main__':
+    main()

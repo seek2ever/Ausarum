@@ -8,7 +8,7 @@ from PySide6.QtCore import (
     Qt,
 )
 
-from book_record import (
+from .book_record import (
     BOOK_COLUMN_TITLES,
     BookRecord,
 )

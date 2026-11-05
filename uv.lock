@@ -150,7 +150,7 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/0c/e2/425bc21d095f2c51a319d120c83111bb23ff5ee887cb9cbbf840df4a21b4/eel-0.18.2.tar.gz", hash = "sha256:0f70b0f8aa2da57859b35d448ea89ad2102d56b206f8500f130df069e9df2c3a", size = 26849, upload-time = "2025-06-22T18:21:36.535Z" }
 
 [[package]]
-name = "eternity-library"
+name = "ausarum"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

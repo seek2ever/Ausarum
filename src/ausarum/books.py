@@ -1,6 +1,6 @@
 """
 此模块用于处理与书籍文件进行具体交互功能（查找、编辑等）的相关代码，
-GUI相关代码放在el_gui.py中
+GUI相关代码放在app.py中
 """
 import datetime
 import os
@@ -22,8 +22,8 @@ from PySide6.QtWidgets import (
     QWidget, 
 )
 
-from book_record import BookRecord
-from utils import Tips
+from .book_record import BookRecord
+from .utils import Tips
 
 
 class ScanBookFiles(QWidget):

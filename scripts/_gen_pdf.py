@@ -1,5 +1,5 @@
 """
-生成 el_gui.py 的精美语法高亮 PDF（浅色背景，保存到桌面）
+生成 app.py 的精美语法高亮 PDF（浅色背景，保存到桌面）
 使用 Microsoft YaHei 字体确保中文字符正常渲染
 """
 import fitz
@@ -10,7 +10,7 @@ from pathlib import Path
 import os
 
 # ===== 配置 =====
-CODE_PATH = Path(r"D:\PycharmProjects\Eternity-Library\el_gui.py")
+CODE_PATH = Path(__file__).resolve().parents[1] / "src" / "ausarum" / "app.py"
 OUTPUT_PATH = Path(r"C:\Users\Wang\Desktop\el_gui_code.pdf")
 
 # A4 页面尺寸 (points)
@@ -115,7 +115,7 @@ def text_kw(fontsize=FONT_SIZE, color=(0, 0, 0)):
 doc = fitz.open()
 
 
-def make_page(doc, subtitle="el_gui.py"):
+def make_page(doc, subtitle="app.py"):
     page = doc.new_page(width=PAGE_W, height=PAGE_H)
     # 底色
     page.draw_rect(fitz.Rect(0, 0, PAGE_W, PAGE_H),
@@ -142,7 +142,7 @@ for i, line_tokens in enumerate(tokenized_lines):
 
     # 分页
     if y + LINE_HEIGHT > PAGE_H - MARGIN_BOTTOM:
-        page = make_page(doc, subtitle="el_gui.py (续)")
+        page = make_page(doc, subtitle="app.py (续)")
         y = MARGIN_TOP
 
     # 交替行背景
@@ -179,7 +179,7 @@ doc[-1].insert_text(
     **text_kw(fontsize=8, color=FOOTER_COLOR),
 )
 
-doc.set_metadata({"title": "el_gui.py Source Code", "author": "Eternity Library"})
+doc.set_metadata({"title": "app.py Source Code", "author": "Ausarum"})
 doc.save(OUTPUT_PATH)
 doc.close()
 

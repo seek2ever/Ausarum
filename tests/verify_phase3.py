@@ -7,8 +7,8 @@ import tempfile
 
 from PySide6.QtCore import QCoreApplication, QObject, QThread, Signal
 
-from book_record import BookRecord
-from database import DatabaseWorker
+from ausarum.book_record import BookRecord
+from ausarum.database import DatabaseWorker
 
 
 class Phase3Check(QObject):

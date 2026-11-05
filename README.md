@@ -1,7 +1,9 @@
 The repo is used for learning.  
 本仓库仅用于个人学习。
 
-# Eternity-Library 项目简介
+# Ausarum（三木书斋）项目简介
+
+Ausarum 是本项目的英文名称，中文名称仍为“三木书斋”。
 此项目用于开发个人图书馆项目，项目经费暂无、完成日期未知、编程经验不足。
 本地书库主要实现以下功能（~~画饼~~）：  
 1.自动扫描/手动添加散落于本地硬盘各个文件夹中的电子书籍（包括但不限于pdf，doc，txt，epub……），集中进行管理；  
@@ -13,8 +15,31 @@ The repo is used for learning.
 7.思维导图与书籍关联，点击导图可跳转至相应章节；
 
 # 项目依赖包
-见 pyproject.toml
+见 [pyproject.toml](./pyproject.toml)。
 # Python版本：3.12
+
+## 项目结构
+
+```text
+src/ausarum/   应用程序包（GUI、数据库、书籍和 PDF 功能）
+tests/         阶段验证脚本和自动化测试
+scripts/       开发辅助脚本
+guide/         开发指南
+diagram/       架构图和流程图
+images/        应用图片资源
+```
+
+## 启动
+
+```bash
+uv run ausarum
+```
+
+也可以使用模块方式启动：
+
+```bash
+uv run python -m ausarum
+```
 # TODO
 详见：https://github.com/users/seek2ever/projects/3
 

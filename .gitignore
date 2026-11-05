@@ -5,9 +5,22 @@ __pycache__/database.cpython-39.pyc
 # Python cache
 __pycache__/
 *.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+build/
+*.egg-info/
+
+# Local application data
+books_information.db
+*.db-wal
+*.db-shm
 
 # Untracked icons
-images/icons/保存.png
+src/ausarum/icons/保存.png
 
 # UI test files
 test.ui
@@ -15,3 +28,6 @@ ui_files/
 
 # Claude Code config
 .claude/
+
+# 改名前的配置备份
+.backup-ausarum/

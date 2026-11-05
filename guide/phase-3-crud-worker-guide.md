@@ -4,7 +4,7 @@
 
 阶段 3 把其余修改操作也迁入同一个 Worker。本项目当前没有已经接入数据库的删除按钮或编辑保存流程：表格模型允许直接修改内存数据，`on_table_data_changed()` 目前只打印；旧 `DatabaseManager` 定义了主线程增删改方法，但目前没有被 `MainWindow` 或 `books.py` 实例化。`pdf.py` 仍会创建 `DatabaseManager` 读取书籍路径，因此本阶段不能直接删除整个旧类。本指南会一并接通表格编辑保存和一个选中行删除入口，并保留旧类供这个尚未迁移的 PDF 查询使用。
 
-> 本文代码按当前 `database.py`、`el_gui.py`、`table_model.py`、`book_record.py` 和阶段 2 验证脚本编写，代码块均为可直接粘贴的实现片段。不要让旧 `DatabaseManager` 和 `DatabaseWorker` 同时处理同一项修改。
+> 本文代码按当前 `database.py`、`app.py`、`table_model.py`、`book_record.py` 和阶段 2 验证脚本编写，代码块均为可直接粘贴的实现片段。不要让旧 `DatabaseManager` 和 `DatabaseWorker` 同时处理同一项修改。
 
 ## 1. 阶段目标与边界
 
@@ -53,140 +53,143 @@ import math
 
 ```python
     @Slot(int, str, object)
-    def update_book_field(
+
+
+def update_book_field(
         self,
         book_id: int,
         field_name: str,
         value: object,
-    ) -> None:
-        """按稳定 ID 更新一个字段；禁止更改 book_id。"""
-        if self.connection is None:
-            self.mutation_error.emit("数据库连接未初始化，无法更新书籍。")
-            return
+) -> None:
+    """按稳定 ID 更新一个字段；禁止更改 book_id。"""
+    if self.connection is None:
+        self.change_error.emit("数据库连接未初始化，无法更新书籍。")
+        return
 
-        try:
-            if not isinstance(book_id, int) or isinstance(book_id, bool):
-                raise ValueError("书籍 ID 必须是整数。")
-            if book_id <= 0:
-                raise ValueError("书籍 ID 无效。")
+    try:
+        if not isinstance(book_id, int) or isinstance(book_id, bool):
+            raise ValueError("书籍 ID 必须是整数。")
+        if book_id <= 0:
+            raise ValueError("书籍 ID 无效。")
 
-            # book_id 是记录定位键，不允许通过表格编辑。
-            editable_columns = frozenset(BOOK_COLUMNS[1:])
-            if field_name not in editable_columns:
-                raise ValueError(f"不允许编辑字段：{field_name}")
+        # book_id 是记录定位键，不允许通过表格编辑。
+        editable_columns = frozenset(BOOK_COLUMNS[1:])
+        if field_name not in editable_columns:
+            raise ValueError(f"不允许编辑字段：{field_name}")
 
-            if field_name in {"isbn", "pages"}:
-                if value is None or value == "":
-                    normalized_value = None
-                elif isinstance(value, bool):
-                    raise ValueError(f"{field_name} 必须是整数。")
-                else:
-                    if isinstance(value, float) and not value.is_integer():
-                        raise ValueError(f"{field_name} 必须是整数。")
-                    normalized_value = int(value)
-                    if field_name == "pages" and normalized_value < 0:
-                        raise ValueError("页数不能小于 0。")
-            elif field_name == "read_time":
-                if value is None or value == "":
-                    normalized_value = None
-                else:
-                    normalized_value = float(value)
-                    if not math.isfinite(normalized_value) or normalized_value < 0:
-                        raise ValueError("阅读时长必须是有限的非负数字。")
-            elif value is None:
+        if field_name in {"isbn", "pages"}:
+            if value is None or value == "":
                 normalized_value = None
-            elif isinstance(value, str):
-                normalized_value = value
+            elif isinstance(value, bool):
+                raise ValueError(f"{field_name} 必须是整数。")
             else:
-                normalized_value = str(value)
+                if isinstance(value, float) and not value.is_integer():
+                    raise ValueError(f"{field_name} 必须是整数。")
+                normalized_value = int(value)
+                if field_name == "pages" and normalized_value < 0:
+                    raise ValueError("页数不能小于 0。")
+        elif field_name == "read_time":
+            if value is None or value == "":
+                normalized_value = None
+            else:
+                normalized_value = float(value)
+                if not math.isfinite(normalized_value) or normalized_value < 0:
+                    raise ValueError("阅读时长必须是有限的非负数字。")
+        elif value is None:
+            normalized_value = None
+        elif isinstance(value, str):
+            normalized_value = value
+        else:
+            normalized_value = str(value)
+
+        if field_name == "book_name":
+            if not isinstance(normalized_value, str):
+                raise ValueError("书名不能为空。")
+            normalized_value = normalized_value.strip()
+            if not normalized_value:
+                raise ValueError("书名不能为空。")
+
+        with self.connection:
+            # 先锁定写事务，再做校验，避免检查后另一写入者抢先修改记录。
+            self.connection.execute("BEGIN IMMEDIATE")
+            matching_rows = self.connection.execute(
+                "SELECT COUNT(*) FROM books_information WHERE book_id = ?",
+                (book_id,),
+            ).fetchone()[0]
+            if matching_rows != 1:
+                raise ValueError(
+                    f"书籍 ID {book_id} 对应 {matching_rows} 条记录，"
+                    "无法安全更新。"
+                )
 
             if field_name == "book_name":
-                if not isinstance(normalized_value, str):
-                    raise ValueError("书名不能为空。")
-                normalized_value = normalized_value.strip()
-                if not normalized_value:
-                    raise ValueError("书名不能为空。")
-
-            with self.connection:
-                # 先锁定写事务，再做校验，避免检查后另一写入者抢先修改记录。
-                self.connection.execute("BEGIN IMMEDIATE")
-                matching_rows = self.connection.execute(
-                    "SELECT COUNT(*) FROM books_information WHERE book_id = ?",
-                    (book_id,),
-                ).fetchone()[0]
-                if matching_rows != 1:
-                    raise ValueError(
-                        f"书籍 ID {book_id} 对应 {matching_rows} 条记录，"
-                        "无法安全更新。"
-                    )
-
-                if field_name == "book_name":
-                    duplicate = self.connection.execute(
-                        """
-                        SELECT 1
-                        FROM books_information
-                        WHERE book_name = ? AND book_id <> ?
-                        LIMIT 1
-                        """,
-                        (normalized_value, book_id),
-                    ).fetchone()
-                    if duplicate is not None:
-                        raise ValueError(
-                            f"书名“{normalized_value}”已经存在，未保存修改。"
-                        )
-
-                # field_name 已经过白名单验证；字段值仍必须使用参数绑定。
-                cursor = self.connection.execute(
-                    f"UPDATE books_information SET {field_name} = ? "
-                    "WHERE book_id = ?",
+                duplicate = self.connection.execute(
+                    """
+                    SELECT 1
+                    FROM books_information
+                    WHERE book_name = ? AND book_id <> ?
+                    LIMIT 1
+                    """,
                     (normalized_value, book_id),
-                )
-                if cursor.rowcount != 1:
-                    raise ValueError("更新记录数量不为 1，已撤销本次操作。")
-
-        except (sqlite3.Error, OverflowError, TypeError, ValueError) as error:
-            self.mutation_error.emit(f"更新书籍失败：{error}")
-            return
-
-        self.mutation_finished.emit("update", book_id)
-
-    @Slot(int)
-    def delete_book_by_id(self, book_id: int) -> None:
-        """按唯一的 book_id 删除一条记录。"""
-        if self.connection is None:
-            self.mutation_error.emit("数据库连接未初始化，无法删除书籍。")
-            return
-
-        try:
-            if not isinstance(book_id, int) or isinstance(book_id, bool):
-                raise ValueError("书籍 ID 必须是整数。")
-            if book_id <= 0:
-                raise ValueError("书籍 ID 无效。")
-
-            with self.connection:
-                self.connection.execute("BEGIN IMMEDIATE")
-                matching_rows = self.connection.execute(
-                    "SELECT COUNT(*) FROM books_information WHERE book_id = ?",
-                    (book_id,),
-                ).fetchone()[0]
-                if matching_rows != 1:
+                ).fetchone()
+                if duplicate is not None:
                     raise ValueError(
-                        f"书籍 ID {book_id} 对应 {matching_rows} 条记录，"
-                        "无法安全删除。"
+                        f"书名“{normalized_value}”已经存在，未保存修改。"
                     )
 
-                cursor = self.connection.execute(
-                    "DELETE FROM books_information WHERE book_id = ?",
-                    (book_id,),
+            # field_name 已经过白名单验证；字段值仍必须使用参数绑定。
+            cursor = self.connection.execute(
+                f"UPDATE books_information SET {field_name} = ? "
+                "WHERE book_id = ?",
+                (normalized_value, book_id),
+            )
+            if cursor.rowcount != 1:
+                raise ValueError("更新记录数量不为 1，已撤销本次操作。")
+
+    except (sqlite3.Error, OverflowError, TypeError, ValueError) as error:
+        self.change_error.emit(f"更新书籍失败：{error}")
+        return
+
+    self.change_finished.emit("update", book_id)
+
+
+@Slot(int)
+def delete_book_by_id(self, book_id: int) -> None:
+    """按唯一的 book_id 删除一条记录。"""
+    if self.connection is None:
+        self.change_error.emit("数据库连接未初始化，无法删除书籍。")
+        return
+
+    try:
+        if not isinstance(book_id, int) or isinstance(book_id, bool):
+            raise ValueError("书籍 ID 必须是整数。")
+        if book_id <= 0:
+            raise ValueError("书籍 ID 无效。")
+
+        with self.connection:
+            self.connection.execute("BEGIN IMMEDIATE")
+            matching_rows = self.connection.execute(
+                "SELECT COUNT(*) FROM books_information WHERE book_id = ?",
+                (book_id,),
+            ).fetchone()[0]
+            if matching_rows != 1:
+                raise ValueError(
+                    f"书籍 ID {book_id} 对应 {matching_rows} 条记录，"
+                    "无法安全删除。"
                 )
-                if cursor.rowcount != 1:
-                    raise ValueError("删除记录数量不为 1，已撤销本次操作。")
 
-        except (sqlite3.Error, OverflowError, TypeError, ValueError) as error:
-            self.mutation_error.emit(f"删除书籍失败：{error}")
-            return
+            cursor = self.connection.execute(
+                "DELETE FROM books_information WHERE book_id = ?",
+                (book_id,),
+            )
+            if cursor.rowcount != 1:
+                raise ValueError("删除记录数量不为 1，已撤销本次操作。")
 
-        self.mutation_finished.emit("delete", book_id)
+    except (sqlite3.Error, OverflowError, TypeError, ValueError) as error:
+        self.change_error.emit(f"删除书籍失败：{error}")
+        return
+
+    self.change_finished.emit("delete", book_id)
 ```
 
 `with self.connection` 会在代码正常离开时提交，在异常离开时回滚。重复名称校验也位于写事务里，所以不会出现“先检查重名、之后才更新”的竞态窗口。当前表没有 `book_id` 唯一约束；方法因此显式要求 ID 只对应一条记录，遇到历史重复 ID 时宁可拒绝修改，也不误改多本书。
@@ -240,7 +243,7 @@ import math
 
 这里的 `BOOK_ID_INDEX` 已在 `table_model.py` 顶部定义为 `0`。`setData()` 与 `flags()` 都检查 ID 列：前者是实际写入保护，后者是界面可编辑状态。
 
-## 5. 修改 `el_gui.py`：连接 Worker 请求和结果
+## 5. 修改 `app.py`：连接 Worker 请求和结果
 
 ### 5.1 导入列名常量
 
@@ -268,12 +271,12 @@ from book_record import (
 在 Worker 结果信号连接区域添加：
 
 ```python
-        self._worker.mutation_finished.connect(
-            self._on_mutation_finished
-        )
-        self._worker.mutation_error.connect(
-            self._on_mutation_error
-        )
+        self._worker.change_finished.connect(
+    self._on_change_finished
+)
+self._worker.change_error.connect(
+    self._on_change_error
+)
 ```
 
 在主线程请求信号连接区域添加：
@@ -295,39 +298,41 @@ self.sig_delete_book.connect(
 
 ```python
     def on_table_data_changed(self, top_left, bottom_right, roles) -> None:
+
+
     """把表格编辑转换成 Worker 更新请求。"""
-    if roles and Qt.ItemDataRole.EditRole not in roles:
-        return
+if roles and Qt.ItemDataRole.EditRole not in roles:
+    return
 
-    for row in range(top_left.row(), bottom_right.row() + 1):
-        for column in range(top_left.column(), bottom_right.column() + 1):
-            if column == 0:
-                continue
+for row in range(top_left.row(), bottom_right.row() + 1):
+    for column in range(top_left.column(), bottom_right.column() + 1):
+        if column == 0:
+            continue
 
-            index = self.table_model.index(row, column)
-            book_id = self.table_model.data(
-                index,
-                role=BookTableModel.BookIdRole,
+        index = self.table_model.index(row, column)
+        book_id = self.table_model.data(
+            index,
+            role=BookTableModel.BookIdRole,
+        )
+        if not isinstance(book_id, int) or isinstance(book_id, bool):
+            self._on_change_error(
+                "当前书籍没有有效 ID，无法保存表格修改。"
             )
-            if not isinstance(book_id, int) or isinstance(book_id, bool):
-                self._on_mutation_error(
-                    "当前书籍没有有效 ID，无法保存表格修改。"
-                )
-                return
+            return
 
-            field_name = BOOK_COLUMNS[column]
-            new_value = self.table_model.data(
-                index,
-                role=Qt.ItemDataRole.EditRole,
-            )
-            self.sig_update_book.emit(
-                book_id,
-                field_name,
-                new_value,
-            )
+        field_name = BOOK_COLUMNS[column]
+        new_value = self.table_model.data(
+            index,
+            role=Qt.ItemDataRole.EditRole,
+        )
+        self.sig_update_book.emit(
+            book_id,
+            field_name,
+            new_value,
+        )
 
-    if self.statusbar is not None:
-        self.statusbar.showMessage("正在保存表格修改……")
+if self.statusbar is not None:
+    self.statusbar.showMessage("正在保存表格修改……")
 ```
 
 `dataChanged` 发出时 Model 的内存值已经改变，所以 Worker 失败后必须重新查询数据库，把 Model 恢复成实际保存的数据。第 8 节会加入统一的成功、失败处理。
@@ -340,8 +345,8 @@ self.sig_delete_book.connect(
 
 ```python
         self.delete_button = QPushButton("删除选中书籍")
-        self.delete_button.setFixedHeight(36)
-        self.delete_button.clicked.connect(self._delete_selected_book)
+self.delete_button.setFixedHeight(36)
+self.delete_button.clicked.connect(self._delete_book)
 ```
 
 然后在 `layout.addWidget(self.scan_button)` 后添加：
@@ -420,44 +425,46 @@ self.sig_delete_book.connect(
 
 ```python
     def _invalidate_books_cache(self) -> None:
-        """写操作成功或失败后都不能继续使用旧缓存。"""
-        self._books_cache = None
-        self._cache_timestamp = 0.0
+    """写操作成功或失败后都不能继续使用旧缓存。"""
+    self._books_cache = None
+    self._cache_timestamp = 0.0
 
-    def _on_mutation_finished(
+
+def _on_mutation_finished(
         self,
         operation: str,
         book_id: int,
-    ) -> None:
-        """修改成功后刷新封面和表格 Model。"""
-        self._invalidate_books_cache()
-        if hasattr(self, "delete_button"):
-            self.delete_button.setEnabled(True)
+) -> None:
+    """修改成功后刷新封面和表格 Model。"""
+    self._invalidate_cache()
+    if hasattr(self, "delete_button"):
+        self.delete_button.setEnabled(True)
 
-        if self.statusbar is not None:
-            action = "更新" if operation == "update" else "删除"
-            self.statusbar.showMessage(
-                f"书籍 {book_id} 已{action}，正在刷新视图……"
-            )
-        self.request_all.emit()
+    if self.statusbar is not None:
+        action = "更新" if operation == "update" else "删除"
+        self.statusbar.showMessage(
+            f"书籍 {book_id} 已{action}，正在刷新视图……"
+        )
+    self.request_all.emit()
 
-    def _on_mutation_error(self, error_msg: str) -> None:
-        """修改失败时提示用户，并从数据库恢复 Model 的真实内容。"""
-        self._invalidate_books_cache()
-        if hasattr(self, "delete_button"):
-            self.delete_button.setEnabled(True)
 
-        Tips.information_msg(error_msg)
-        if self.statusbar is not None:
-            self.statusbar.showMessage("书籍修改失败，正在恢复数据……")
-        self.request_all.emit()
+def _on_mutation_error(self, error_msg: str) -> None:
+    """修改失败时提示用户，并从数据库恢复 Model 的真实内容。"""
+    self._invalidate_cache()
+    if hasattr(self, "delete_button"):
+        self.delete_button.setEnabled(True)
+
+    Tips.information_msg(error_msg)
+    if self.statusbar is not None:
+        self.statusbar.showMessage("书籍修改失败，正在恢复数据……")
+    self.request_all.emit()
 ```
 
 该方法通过现有 `_on_books_loaded()` 更新 `cover_model` 和 `table_model`。错误时也刷新，因为表格在 `dataChanged` 时已经更新了内存值；重新查询可以撤销未写入的值。`delete_button` 的 `hasattr` 检查可覆盖窗口初始化早期出现错误的情况。
 
 ## 9. 清理旧 `DatabaseManager`
 
-当前 `el_gui.py` 已只导入 `DatabaseWorker`，扫描器也只发送 `BookRecord`；但 `pdf.py:get_pdf_path()` 仍会创建 `DatabaseManager` 并调用 `get_book()`。因此本阶段不要删除整个 `DatabaseManager` 类，也不要删除 PDF 仍在使用的查询方法。
+当前 `app.py` 已只导入 `DatabaseWorker`，扫描器也只发送 `BookRecord`；但 `pdf.py:get_pdf_path()` 仍会创建 `DatabaseManager` 并调用 `get_book()`。因此本阶段不要删除整个 `DatabaseManager` 类，也不要删除 PDF 仍在使用的查询方法。
 
 本阶段应确认 `MainWindow`、扫描器及其他新增 UI 流程不再实例化 `DatabaseManager` 或调用其写方法。对 `DatabaseManager`、`handle_duplicate_book`、`add_book_result`、`update_book(` 和 `delete_book(` 做项目搜索；若写方法还有调用方，先迁移到 Worker 请求信号，不要直接删除仍被调用的 API。旧类及其只读连接的最终清理由总架构指南阶段 5 处理：先将 `pdf.py` 的路径查询迁入 Worker，再确认无调用方后删除 `DatabaseManager` 和旧类型导入。
 
@@ -501,8 +508,8 @@ class Phase3Check(QObject):
         self.close_requested.connect(self.worker.close_database)
 
         self.worker.initialized.connect(self._on_initialized)
-        self.worker.mutation_finished.connect(self._on_mutation_finished)
-        self.worker.mutation_error.connect(self._on_mutation_error)
+        self.worker.change_finished.connect(self._on_mutation_finished)
+        self.worker.change_error.connect(self._on_mutation_error)
         self.worker.books_ready.connect(self._on_books_ready)
         self.worker.query_error.connect(self._on_query_error)
         self.thread.finished.connect(self.worker.deleteLater)
@@ -699,13 +706,13 @@ if __name__ == "__main__":
 从项目根目录运行：
 
 ```powershell
-python -m py_compile database.py el_gui.py table_model.py verify_phase1.py verify_phase2.py verify_phase3.py
+uv run python -m compileall src/ausarum tests
 python verify_phase1.py
 python verify_phase2.py
 python verify_phase3.py
 ```
 
-预期三个验证脚本分别输出阶段 1、阶段 2 和阶段 3 检查通过。随后运行 `python el_gui.py` 手工检查：
+预期三个验证脚本分别输出阶段 1、阶段 2 和阶段 3 检查通过。随后运行 `uv run ausarum` 手工检查：
 
 1. 在表格视图编辑书名、作者、页数、阅读时长等字段，完成后数据库值仍存在；切换封面/表格视图后两个 Model 显示相同数据。
 2. 尝试把书名改为另一本书的书名，确认出现明确错误，原书名恢复，其他记录不受影响。
@@ -721,13 +728,13 @@ python verify_phase3.py
 
 | 现象 | 检查点 |
 |---|---|
-| 编辑后短暂显示新值，随后恢复旧值 | 查看 `mutation_error` 内容；失败后重新查询是预期行为，用于撤销未保存的 Model 值。 |
+| 编辑后短暂显示新值，随后恢复旧值 | 查看 `change_error` 内容；失败后重新查询是预期行为，用于撤销未保存的 Model 值。 |
 | 编辑成功但封面视图未更新 | 确认 `_on_mutation_finished()` 调用 `request_all.emit()`，且 `_on_books_loaded()` 同时更新两个 Model。 |
 | 点击删除时报没有选中行 | 当前删除按钮仅使用表格视图的选中行；切换到表格模式并选中整行。 |
 | SQL 报字段名错误 | 检查 `BOOK_COLUMNS` 与 SQLite 建表字段顺序、名称是否一致；不要允许调用方自行传入 SQL 列名。 |
 | 修改一个字段时其他字段被覆盖 | 更新槽必须只执行单字段 `UPDATE`，不能把整行缓存作为待更新记录写回。 |
 | 删除多条记录或更新失败 | 检查数据库中是否已有重复 `book_id`；当前实现发现 ID 不唯一时会拒绝操作以保护数据。 |
-| 写操作与扫描提示混乱 | 确认 CRUD 使用 `mutation_finished` / `mutation_error`，扫描仍使用 `write_finished` / `write_error`。 |
+| 写操作与扫描提示混乱 | 确认 CRUD 使用 `change_finished` / `change_error`，扫描仍使用 `write_finished` / `write_error`。 |
 
 ## 阶段 3 完成标准
 

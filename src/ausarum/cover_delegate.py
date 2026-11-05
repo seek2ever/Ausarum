@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
     QStyleOptionViewItem
 )
 
-from cover_model import CoverCardModel
+from .cover_model import CoverCardModel
 
 
 class CoverCardDelegate(QStyledItemDelegate):

@@ -7,8 +7,8 @@ import tempfile
 
 from PySide6.QtCore import QCoreApplication, QObject, QThread, Signal
 
-from book_record import BookRecord
-from database import DatabaseWorker
+from ausarum.book_record import BookRecord
+from ausarum.database import DatabaseWorker
 
 
 class Phase3Check(QObject):
@@ -32,8 +32,8 @@ class Phase3Check(QObject):
         self.close_requested.connect(self.worker.close_database)
 
         self.worker.initialized.connect(self._on_initialized)
-        self.worker.mutation_finished.connect(self._on_mutation_finished)
-        self.worker.mutation_error.connect(self._on_mutation_error)
+        self.worker.change_finished.connect(self._on_mutation_finished)
+        self.worker.change_error.connect(self._on_mutation_error)
         self.worker.books_ready.connect(self._on_books_ready)
         self.worker.query_error.connect(self._on_query_error)
         self.thread.finished.connect(self.worker.deleteLater)

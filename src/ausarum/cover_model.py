@@ -7,7 +7,7 @@ from PySide6.QtCore import (
     Qt,
 )
 
-from book_record import BookRecord
+from .book_record import BookRecord
 
 
 class CoverCardModel(QAbstractListModel):

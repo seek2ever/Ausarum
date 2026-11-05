@@ -28,18 +28,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Architecture
 
 ```
-el_gui.py          — 主窗口入口，MainWindow 类，GUI 布局和信号连接
-books.py           — 书籍业务逻辑：ScanBookFiles 扫描本地文件，Books 基类及子类
-database.py        — 数据库管理：DatabaseManager，继承 QObject 使用 Qt 信号机制
-utils.py           — 工具类：Tips（QMessageBox 静态封装）
-pdf.py             — PDF 操作：路径获取、文字提取
+src/ausarum/app.py           — 主窗口入口，MainWindow 类，GUI 布局和信号连接
+src/ausarum/books.py         — 书籍业务逻辑：ScanBookFiles 扫描本地文件，Books 基类及子类
+src/ausarum/database.py      — 数据库管理：DatabaseWorker，继承 QObject 使用 Qt 信号机制
+src/ausarum/utils.py         — 工具类：Tips（QMessageBox 静态封装）
+src/ausarum/pdf.py           — PDF 操作：路径获取、文字提取
 ```
 
 ### 关键模块说明
 
-1. **MainWindow** (`el_gui.py`): 主界面，包含菜单栏、状态栏、操作按钮（扫描/显示/取消/关闭）、书籍表格（QTableWidget）。通过 Qt 信号监听 DatabaseManager 的 `duplicate_book` 和 `add_book_result` 信号。
+1. **MainWindow** (`src/ausarum/app.py`): 主界面，包含菜单栏、状态栏、操作按钮（扫描/显示/取消/关闭）、书籍表格（QTableWidget）。通过 Qt 信号监听数据库 Worker 的结果信号。
 
-2. **DatabaseManager** (`database.py`): 核心数据层，使用 QObject 信号实现与 GUI 的解耦。`duplicate_book` 信号在发现重名书籍时触发，`add_book_result` 信号通知操作结果。数据库表 `books_information` 包含 book_id~introduction 共 18 个字段。
+2. **DatabaseWorker** (`src/ausarum/database.py`): 核心数据层，使用 QObject 信号实现与 GUI 的解耦。数据库表 `books_information` 保存书籍信息。
 
 3. **Books 类体系**: `Books` 基类 → `PDFBooks`、`TxtBooks`、`EpubBooks` 三个子类，目前多为占位方法。
 
@@ -50,16 +50,15 @@ DatabaseManager 发出信号 → MainWindow 的槽函数处理：重复书籍弹
 ## Run
 
 ```bash
-# 使用项目自带 venv（Python 3.12）
-source venv/Scripts/activate  # Windows Git Bash
-python el_gui.py
+# 使用 uv 启动（Python 3.12）
+uv run ausarum
 ```
 
 ## Development Notes
 
 - 所有 UI 文本使用中文（通过 QCoreApplication.translate 包装）
 - 数据库文件 `books_information.db` 自动创建在项目根目录
-- 书籍图标在 `images/icons/` 目录下
+- 书籍图标在 `src/ausarum/icons/` 目录下
 - 项目有 venv（Python 3.12），另有 pyvenv.cfg 指向的外部环境
 - `exercise.py` 是 QPalette 调色板示例，与主项目无关
 

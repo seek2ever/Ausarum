@@ -7,8 +7,8 @@ import tempfile
 
 from PySide6.QtCore import QCoreApplication, QObject, QThread, Signal
 
-from book_record import BOOK_COLUMNS
-from database import DatabaseWorker
+from ausarum.book_record import BOOK_COLUMNS
+from ausarum.database import DatabaseWorker
 
 
 class WorkerCheck(QObject):

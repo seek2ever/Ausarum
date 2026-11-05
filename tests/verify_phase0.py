@@ -1,6 +1,6 @@
 import sqlite3
 
-from book_record import (
+from ausarum.book_record import (
     BOOK_COLUMNS,
     BOOK_COLUMN_TITLES,
     BookRecord,

@@ -70,9 +70,9 @@
   <h1>三木书斋数据库线程化重构</h1>
   <div class="subtitle">从 DatabaseManager + BookQueryWorker 到统一 DatabaseWorker</div>
   <p>一份面向学习和实施的完整方案：解释为什么要把耗时数据库操作放入工作线程，如何设计 Qt 信号槽、SQLite 连接、事务、查询结果和界面刷新，以及如何分阶段落地。</p>
-  <div class="notice"><b>重要范围说明：</b>本文是设计与学习指南。本次只生成说明文档，不直接修改项目中的 <code>database.py</code>、<code>el_gui.py</code> 或其他业务代码。</div>
+  <div class="notice"><b>重要范围说明：</b>本文是设计与学习指南。本次只生成说明文档，不直接修改项目中的 <code>database.py</code>、<code>app.py</code> 或其他业务代码。</div>
   <div class="meta">
-    <p><b>适用项目：</b>Eternity-Library（三木书斋）</p>
+    <p><b>适用项目：</b>Ausarum（三木书斋）</p>
     <p><b>技术背景：</b>Python 3.12+、PySide6、SQLite3</p>
     <p><b>核心目标：</b>主线程只负责 UI；数据库读写在统一工作线程中串行执行；结果通过信号返回。</p>
   </div>
@@ -388,6 +388,6 @@ ON books_information(author);</pre>
 <h2>结语</h2>
 <p>这次重构的核心不是把代码“搬进线程”这么简单，而是建立清晰的边界：<b>UI 提出请求，DatabaseWorker 执行数据库操作，结果通过信号返回，Model 在主线程更新。</b>对于当前项目，单个数据库工作线程比读写双线程更容易学习、验证和维护；等数据规模和功能复杂度真正增长后，再考虑分页加载、任务队列或更细粒度的并发优化。</p>
 
-<div class="footer">Eternity-Library guide · 数据库线程化重构学习指南 · 本文仅新增指南文件，不修改项目业务代码</div>
+<div class="footer">Ausarum guide · 数据库线程化重构学习指南 · 本文仅新增指南文件，不修改项目业务代码</div>
 </body>
 </html>

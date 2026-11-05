@@ -1,7 +1,9 @@
 The repo is used for learning.  
 本仓库仅用于个人学习。
 
-# Eternity-Library 项目简介
+# Ausarum（三木书斋）项目简介
+
+Ausarum 是本项目的英文名称，中文名称仍为“三木书斋”。
 此项目用于开发个人图书馆项目，项目经费暂无、完成日期未知、编程经验不足。
 本地书库主要实现以下功能（~~画饼~~）：  
 1.自动扫描/手动添加散落于本地硬盘各个文件夹中的电子书籍（包括但不限于pdf，doc，txt，epub……），集中进行管理；  
@@ -13,8 +15,31 @@ The repo is used for learning.
 7.思维导图与书籍关联，点击导图可跳转至相应章节；
 
 # 项目依赖包
-见 pyproject.toml
+见 [pyproject.toml](./pyproject.toml)。
 # Python版本：3.12
+
+## 项目结构
+
+```text
+src/ausarum/   应用程序包（GUI、数据库、书籍和 PDF 功能）
+tests/         阶段验证脚本和自动化测试
+scripts/       开发辅助脚本
+guide/         开发指南
+diagram/       架构图和流程图
+images/        应用图片资源
+```
+
+## 启动
+
+```bash
+uv run ausarum
+```
+
+也可以使用模块方式启动：
+
+```bash
+uv run python -m ausarum
+```
 # TODO
 详见：https://github.com/users/seek2ever/projects/3
 
@@ -93,11 +118,26 @@ sequenceDiagram
     model->>view: dataChanged信号()<br/>通知视图数据已修改
     view->>model: on_table_data_changed()<br/>触发data()读取DisplayRole
     model->>view: 返回修改后的数据<br/>重新显示在单元格中
+```  
+## 扫描入库流程  
+主界面按下“扫描文件”按钮后，具体扫描入库过程如下：
+```mermaid
+sequenceDiagram
+    autonumber
+    participant m as MainWindow<br/>主线程
+    participant d as DatabaseWorker<br/>工作线程 
+    m ->>m: scan_button.clicked()
+    m ->>m: scan_books()
+    m ->>m: scan_book_files()
+    m ->>m: on_books_found()
+    m ->>d: find_batch_duplicates()
+    d ->>m: _on_duplicates_ready()
+    m ->>d: insert_books()
+    d ->>m: _on_write_finished()
+    m ->>d: fetch_all_books()
+    d ->>d: _select_all()
+    d ->>m: _on_books_loaded()
 ```
-## ScanBookFiles类中scan_book_files方法
-1. any_books_found = False，用于判断是否有新书被添加，若有则在最后返回True，否则返回False；使用if not any_books_found进行判断时，若any_books_found为False（即if not any_books_found的值为Ture）时，满足Python的真值测试（在Python中，if后面的条件为True时执行后面的代码，否则跳过）；
-2. GUI界面部件增加布局后，数据库中的数据可以正常显示；  
-3. 后台查询线程逻辑：创建新线程对象  
 # 常见问题
 
 ## 为什么不用Python的threading.Thread？  

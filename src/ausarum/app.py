@@ -16,11 +16,11 @@ from PySide6.QtCore import (
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
+    QComboBox,
     QFrame,
     QHBoxLayout,
     QLabel,
     QListView,
-    QListWidget,
     QMainWindow,
     QMessageBox,
     QPushButton,
@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
     QStatusBar,
     QTableView,
     QVBoxLayout,
-    QWidget,
+    QWidget, QLineEdit,
 )
 
 from .books import ScanBookFiles
@@ -90,7 +90,7 @@ class MainWindow(QMainWindow):
         self.right_stack: QStackedWidget
         # 左侧面板组件
         self.toggle_view_btn: QPushButton
-        self.category_list: QListWidget
+        self.category_list: QComboBox
         self.scan_button: QPushButton
         self.clear_button: QPushButton
         self.close_button: QPushButton
@@ -177,12 +177,13 @@ class MainWindow(QMainWindow):
         self.statusbar = QStatusBar(self)
         self.statusbar.setObjectName("statusbar")
         self.setStatusBar(self.statusbar)
-        self.statusbar.showMessage("欢迎使用三木书斋")
+        self.statusbar.showMessage("欢迎使用三木书斋，书中自有黄金屋")
 
         # 设置按钮字号
         self.setStyleSheet("""
         QPushButton {font-size: 11pt; font-family: Microsoft YaHei;}
         QListWidget {font-size: 11pt; font-family: Microsoft YaHei;}
+        QComboBox {font-size: 11pt; font-family: Microsoft YaHei;}
         """)
 
     def _resize_table_columns(self):
@@ -196,9 +197,9 @@ class MainWindow(QMainWindow):
         """创建左侧面板"""
         panel = QWidget()
         panel.setFixedWidth(220)  # 设置左侧固定宽度
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(10)
+        left_layout = QVBoxLayout(panel)
+        left_layout.setContentsMargins(8, 8, 8, 8)
+        left_layout.setSpacing(10)
 
         # 视图切换区
         view_label = QLabel(self._translate("Views", "视图模式"))
@@ -213,39 +214,45 @@ class MainWindow(QMainWindow):
         self.resize_btn.setFixedHeight(36)
         # self.resize_btn.clicked.connect(self._resize_table_columns)
 
-        layout.addWidget(view_label)
-        layout.addWidget(self.toggle_view_btn)
-        layout.addWidget(self.resize_btn)
+        left_layout.addWidget(view_label)
+        left_layout.addWidget(self.toggle_view_btn)
+        left_layout.addWidget(self.resize_btn)
 
         # 分隔线
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
         line.setFrameShadow(QFrame.Shadow.Raised)
-        layout.addWidget(line)
+        left_layout.addWidget(line)
 
-        # 分类筛选区，后续计划改进为标签（类型名称）+拉下列表框的方式筛选
-        filter_label = QLabel(self._translate("Filter", "分类筛选"))
-        filter_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        filter_label.setStyleSheet("font-weight: bold; font-size: 12pt;")
+        # 分类搜索区
+        search_label = QLabel(self._translate("Search", "分类搜索"))
+        search_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        search_label.setStyleSheet("font-weight: bold; font-size: 12pt;")
 
-        self.category_list = QListWidget()
-        self.category_list.addItems([
-            "全部书籍",
-            "按书籍类型",
-            "按阅读状态",
-            "按作者",
-        ])
-        self.category_list.setFixedHeight(140)
-        # self.category_list.currentRowChanged.connect(self._on_category_changed)
+        self.search_box = QLineEdit()
+        self.search_box.setPlaceholderText(self._translate(
+            "Filter here to search",
+            "输入关键词进行筛选"
+        ))
+        self.advanced_search_btn = QPushButton("高级搜索")
+        # self.advanced_search_btn.connect(self.on_advanced_filter)
+        self.general_search_btn = QPushButton("开始搜索")
+        # self.general_search_btn.connect(self.on_general_filter)
+        search_layout = QVBoxLayout()
+        search_sublayout = QHBoxLayout()
+        search_sublayout.addWidget(self.advanced_search_btn)
+        search_sublayout.addWidget(self.general_search_btn)
+        search_layout.addLayout(search_sublayout)
 
-        layout.addWidget(filter_label)
-        layout.addWidget(self.category_list)
+        left_layout.addWidget(search_label)
+        left_layout.addWidget(self.search_box)
+        left_layout.addLayout(search_layout)
 
         # 分隔线
         line_2 = QFrame()
         line_2.setFrameShape(QFrame.Shape.HLine)
         line_2.setFrameShadow(QFrame.Shadow.Sunken)
-        layout.addWidget(line_2)
+        left_layout.addWidget(line_2)
 
         # 快捷操作区
         action_label = QLabel(self._translate("Actions", "快捷操作"))
@@ -268,17 +275,21 @@ class MainWindow(QMainWindow):
         self.close_button.setFixedHeight(36)
         self.close_button.clicked.connect(self.close)
 
-        layout.addWidget(action_label)
-        layout.addWidget(self.scan_button)
-        layout.addWidget(self.delete_button)
-        # layout.addWidget(self.show_button)
-        layout.addWidget(self.clear_button)
-        layout.addWidget(self.close_button)
+        left_layout.addWidget(action_label)
+        left_layout.addWidget(self.scan_button)
+        left_layout.addWidget(self.delete_button)
+        # left_layout.addWidget(self.show_button)
+        left_layout.addWidget(self.clear_button)
+        left_layout.addWidget(self.close_button)
         # 弹簧：将内容推到顶部
-        layout.addStretch()
+        left_layout.addStretch()
         return panel
 
-    def _create_table_view(self) -> QTableView:
+    def _create_table_view(self) -> QWidget:
+        table_container = QWidget()
+        table_layout = QVBoxLayout(table_container)
+        table_layout.setContentsMargins(16, 16, 16, 16)
+
         self.table_view = QTableView()
         self.table_view.setModel(self.table_model)
         self.table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectItems)
@@ -288,20 +299,18 @@ class MainWindow(QMainWindow):
         self.table_view.setShowGrid(True)
         self.table_view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.table_view.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
-        return self.table_view
+        table_layout.addWidget(self.table_view)
+        return table_container
 
     def _create_cover_view(self) -> QWidget:
         """创建封面视图 —— QListView + Delegate 虚拟化绘制"""
-        container = QWidget()
-        layout = QVBoxLayout(container)
-        layout.setContentsMargins(16, 16, 16, 16)
+        cover_container = QWidget()
+        cover_layout = QVBoxLayout(cover_container)
+        cover_layout.setContentsMargins(16, 16, 16, 16)
 
-        toolbar = QHBoxLayout()
         mode_label = QLabel(self._translate("Views", "封面模式"))
         mode_label.setStyleSheet("font-size: 13pt; font-weight: bold;")
-        toolbar.addWidget(mode_label)
-        toolbar.addStretch()
-        layout.addLayout(toolbar)
+        cover_layout.addWidget(mode_label)
 
         self.cover_card_view = QListView()
         self.cover_card_view.setModel(self.cover_model)
@@ -317,7 +326,6 @@ class MainWindow(QMainWindow):
             CoverCardDelegate.CARD_H + 10,
         ))
         self.cover_card_view.setUniformItemSizes(True)
-
         self.cover_card_view.setFrameShape(QFrame.Shape.NoFrame)
         self.cover_card_view.setBackgroundRole(QtGui.QPalette.ColorRole.Base)
         self.cover_card_view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -325,8 +333,8 @@ class MainWindow(QMainWindow):
 
         self.cover_card_view.clicked.connect(self._on_cover_clicked)
 
-        layout.addWidget(self.cover_card_view)
-        return container
+        cover_layout.addWidget(self.cover_card_view)
+        return cover_container
 
     def on_table_data_changed(
             self,
@@ -373,7 +381,7 @@ class MainWindow(QMainWindow):
         )
         # bool类型的True/False也会被视为int类型（分别是0和1），因此需要排除
         if not isinstance(book_id, int) or isinstance(book_id, bool):
-            Tips.information_msg("选中书籍不存在有效ID，无法删除！")
+            Tips.info_msg("选中书籍不存在有效ID，无法删除！")
             return
 
         answer = QMessageBox.question(
@@ -410,7 +418,7 @@ class MainWindow(QMainWindow):
         self._invalidate_cache()
         self.delete_button.setEnabled(True)
 
-        Tips.information_msg(error_msg)
+        Tips.info_msg(error_msg)
         if self.statusbar is not None:
             self.statusbar.showMessage("书籍修改失败，正在恢复数据……")
         self.request_all.emit()
@@ -451,7 +459,7 @@ class MainWindow(QMainWindow):
 
     def _on_query_error(self, error_msg: str) -> None:
         """所有数据库读取错误都在主线程提示用户。"""
-        Tips.information_msg(f"数据库查询失败：{error_msg}")
+        Tips.info_msg(f"数据库查询失败：{error_msg}")
         if self.statusbar is not None:
             self.statusbar.showMessage("数据库查询失败")
 
@@ -586,7 +594,6 @@ class MainWindow(QMainWindow):
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             )
             if reply == QMessageBox.StandardButton.Yes:
-                self._scan_dialog.show()
                 self._scan_dialog.select_directory()
             else:
                 self._scan_dialog.close()
@@ -594,7 +601,7 @@ class MainWindow(QMainWindow):
     def _on_write_error(self, error_msg: str) -> None:
         """写入或重复检查失败时结束批次并在主线程显示错误。"""
         self._finish_scan_batch()
-        Tips.information_msg(error_msg)
+        Tips.info_msg(error_msg)
         if self.statusbar is not None:
             self.statusbar.showMessage("批量入库失败")
         if self._scan_dialog is not None:
@@ -615,7 +622,7 @@ class MainWindow(QMainWindow):
         """窗口关闭时先关闭 Worker 连接，再退出线程。"""
         self.request_close_database.emit()
         if not self._database_thread.wait(3000):
-            Tips.information_msg("数据库线程未能在3秒内正常退出。")
+            Tips.info_msg("数据库线程未能在3秒内正常退出。")
             event.ignore()
             return
         event.accept()

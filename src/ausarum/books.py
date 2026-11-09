@@ -52,8 +52,12 @@ class ScanBookFiles(QWidget):
         self.setLayout(layout)  # 将布局应用到窗口中
 
     def select_directory(self):
-        #  os.path.expanduser("~") 表示打开用户的主目录
-        scan_directory = QFileDialog.getExistingDirectory(self, "选择扫描路径", os.path.expanduser("~"))
+        scan_directory = QFileDialog.getExistingDirectory(
+            self,
+            "选择扫描路径",
+            # os.path.expanduser("~")表示打开用户的主目录
+            os.path.expanduser("~")
+        )
         if scan_directory:
             self.scan_book_files(scan_directory)  # 调用scan_book_files函数扫描文件夹中的电子书
         else:
@@ -106,15 +110,15 @@ class ScanBookFiles(QWidget):
             if reply == QMessageBox.StandardButton.Yes:
                 self.select_directory()
             else:
-                Tips.information_msg("扫描已结束！")
+                Tips.info_msg("扫描已结束！")
                 self.close()
 
         except FileNotFoundError:
-            Tips.information_msg("系统找不到指定的文件，请重试。")
+            Tips.info_msg("系统找不到指定的文件，请重试。")
         except NotADirectoryError:
-            Tips.information_msg("系统找不到指定的路径，请重试。")
+            Tips.info_msg("系统找不到指定的路径，请重试。")
         except PermissionError:
-            Tips.information_msg("扫描路径无访问权限，请检查路径权限。")
+            Tips.info_msg("扫描路径无访问权限，请检查路径权限。")
 
 
 class Books:

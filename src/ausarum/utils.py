@@ -3,7 +3,7 @@ from PySide6.QtWidgets import QMessageBox
 
 class Tips:
     @staticmethod
-    def information_msg(imsg: str) -> None:
+    def info_msg(imsg: str) -> None:
         """显示一般性的通知信息"""
         QMessageBox.information(
             None,

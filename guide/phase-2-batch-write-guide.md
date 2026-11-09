@@ -234,61 +234,61 @@ from book_record import BookRecord
 
 ```python
     def scan_book_files(self, directory: str) -> None:
-        """扫描目录并把记录交给主窗口，不在这里创建数据库连接。"""
-        date = datetime.datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
-        supported_extensions = (".pdf", ".doc", ".docx", ".epub", ".txt")
-        scan_info: list[dict[str, str]] = []
+    """扫描目录并把记录交给主窗口，不在这里创建数据库连接。"""
+    date = datetime.datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
+    supported_extensions = (".pdf", ".doc", ".docx", ".epub", ".txt")
+    scan_info: list[dict[str, str]] = []
 
-        try:
-            for root, _dirs, files in os.walk(directory):
-                for file_name in files:
-                    if file_name.lower().endswith(supported_extensions):
-                        book_name, extension = os.path.splitext(file_name)
-                        scan_info.append({
-                            "book_name": book_name,
-                            "book_path": root,
-                            "book_type": extension.lower(),
-                            "add_time": date,
-                        })
+    try:
+        for root, _dirs, files in os.walk(directory):
+            for file_name in files:
+                if file_name.lower().endswith(supported_extensions):
+                    book_name, extension = os.path.splitext(file_name)
+                    scan_info.append({
+                        "book_name": book_name,
+                        "book_path": root,
+                        "book_type": extension.lower(),
+                        "add_time": date,
+                    })
 
-            if not scan_info:
-                choose = QMessageBox.question(
-                    self,
-                    "提示",
-                    f"未扫描到书籍文件，是否手动检查以下路径：\n{directory}？",
-                    QMessageBox.StandardButton.Yes
-                    | QMessageBox.StandardButton.No,
-                )
-                if choose == QMessageBox.StandardButton.Yes:
-                    os.startfile(directory)
-            else:
-                books = [
-                    BookRecord.from_mapping(book_info)
-                    for book_info in scan_info
-                ]
-                self.books_scanned.emit(books)
-                self.hide()
-                return
-
-            reply = QMessageBox.question(
+        if not scan_info:
+            choose = QMessageBox.question(
                 self,
                 "提示",
-                "扫描完成！是否继续扫描其他文件夹？",
+                f"未扫描到书籍文件，是否手动检查以下路径：\n{directory}？",
                 QMessageBox.StandardButton.Yes
                 | QMessageBox.StandardButton.No,
             )
-            if reply == QMessageBox.StandardButton.Yes:
-                self.select_directory()
-            else:
-                Tips.information_msg("扫描已结束！")
-                self.close()
+            if choose == QMessageBox.StandardButton.Yes:
+                os.startfile(directory)
+        else:
+            books = [
+                BookRecord.from_mapping(book_info)
+                for book_info in scan_info
+            ]
+            self.books_scanned.emit(books)
+            self.hide()
+            return
 
-        except FileNotFoundError:
-            Tips.information_msg("系统找不到指定的文件，请重试。")
-        except NotADirectoryError:
-            Tips.information_msg("系统找不到指定的路径，请重试。")
-        except PermissionError:
-            Tips.information_msg("扫描路径无访问权限，请检查路径权限。")
+        reply = QMessageBox.question(
+            self,
+            "提示",
+            "扫描完成！是否继续扫描其他文件夹？",
+            QMessageBox.StandardButton.Yes
+            | QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            self.select_directory()
+        else:
+            Tips.info_msg("扫描已结束！")
+            self.close()
+
+    except FileNotFoundError:
+        Tips.info_msg("系统找不到指定的文件，请重试。")
+    except NotADirectoryError:
+        Tips.info_msg("系统找不到指定的路径，请重试。")
+    except PermissionError:
+        Tips.info_msg("扫描路径无访问权限，请检查路径权限。")
 ```
 
 扫描器仍然在主线程同步遍历目录；本阶段只把 SQLite 写入移出主线程。每个批次扫描一个目录，批次入库完成后再询问是否扫描下一个目录，避免写入尚未完成时第二批覆盖第一批的待处理状态。把大型目录扫描本身改成后台任务属于后续独立优化，不在阶段 2 引入第二个线程。
@@ -500,7 +500,7 @@ def _on_write_finished(
 def _on_write_error(self, error_msg: str) -> None:
     """写入或重复检查失败时结束批次并在主线程显示错误。"""
     self._finish_scan_batch()
-    Tips.information_msg(error_msg)
+    Tips.info_msg(error_msg)
     if self.statusbar is not None:
         self.statusbar.showMessage("批量入库失败")
     if self._scan_dialog is not None:

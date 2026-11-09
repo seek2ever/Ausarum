@@ -43,6 +43,11 @@ dependencies = [
     "pyparsing>=3.2.3",  # 解析器库（eel 依赖）
     "typing-extensions>=4.13.0",  # 类型注解扩展（eel 依赖）,
 ]
+[dependency-groups]
+dev = [
+    "pygments>=2.19.0",  # scripts/_gen_pdf.py 生成语法高亮 PDF 时使用
+]
+
 [project.scripts]
 ausarum = "ausarum.app:main"
 

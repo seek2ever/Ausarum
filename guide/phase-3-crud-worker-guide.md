@@ -376,45 +376,47 @@ self.delete_button.clicked.connect(self._delete_book)
 
 ```python
     def _delete_selected_book(self) -> None:
+
+
     """确认后按书籍 ID 请求 Worker 删除选中记录。"""
-    selected_rows = self.table_view.selectionModel().selectedRows()
-    if not selected_rows:
-        QMessageBox.information(
-            self,
-            "删除书籍",
-            "请先切换到表格视图并选择一本书。",
-        )
-        return
-
-    row = selected_rows[0].row()
-    index = self.table_model.index(row, 0)
-    book_id = self.table_model.data(
-        index,
-        role=BookTableModel.BookIdRole,
-    )
-    book_name = self.table_model.data(
-        self.table_model.index(row, 1),
-        role=Qt.ItemDataRole.DisplayRole,
-    )
-    if not isinstance(book_id, int) or isinstance(book_id, bool):
-        Tips.information_msg("选中书籍没有有效 ID，无法删除。")
-        return
-
-    answer = QMessageBox.question(
+selected_rows = self.table_view.selectionModel().selectedRows()
+if not selected_rows:
+    QMessageBox.information(
         self,
-        "确认删除",
-        f"确定从书库中删除《{book_name}》吗？\n"
-        "此操作不会删除本地电子书文件。",
-        QMessageBox.StandardButton.Yes
-        | QMessageBox.StandardButton.No,
+        "删除书籍",
+        "请先切换到表格视图并选择一本书。",
     )
-    if answer != QMessageBox.StandardButton.Yes:
-        return
+    return
 
-    self.delete_button.setEnabled(False)
-    self.sig_delete_book.emit(book_id)
-    if self.statusbar is not None:
-        self.statusbar.showMessage("正在删除书籍……")
+row = selected_rows[0].row()
+index = self.table_model.index(row, 0)
+book_id = self.table_model.data(
+    index,
+    role=BookTableModel.BookIdRole,
+)
+book_name = self.table_model.data(
+    self.table_model.index(row, 1),
+    role=Qt.ItemDataRole.DisplayRole,
+)
+if not isinstance(book_id, int) or isinstance(book_id, bool):
+    Tips.info_msg("选中书籍没有有效 ID，无法删除。")
+    return
+
+answer = QMessageBox.question(
+    self,
+    "确认删除",
+    f"确定从书库中删除《{book_name}》吗？\n"
+    "此操作不会删除本地电子书文件。",
+    QMessageBox.StandardButton.Yes
+    | QMessageBox.StandardButton.No,
+)
+if answer != QMessageBox.StandardButton.Yes:
+    return
+
+self.delete_button.setEnabled(False)
+self.sig_delete_book.emit(book_id)
+if self.statusbar is not None:
+    self.statusbar.showMessage("正在删除书籍……")
 ```
 
 这里仅删除数据库记录，不触碰本地文件；这与本项目目前“管理本地图书信息”的定位一致。
@@ -425,9 +427,11 @@ self.delete_button.clicked.connect(self._delete_book)
 
 ```python
     def _invalidate_books_cache(self) -> None:
+
+
     """写操作成功或失败后都不能继续使用旧缓存。"""
-    self._books_cache = None
-    self._cache_timestamp = 0.0
+self._books_cache = None
+self._cache_timestamp = 0.0
 
 
 def _on_mutation_finished(
@@ -454,7 +458,7 @@ def _on_mutation_error(self, error_msg: str) -> None:
     if hasattr(self, "delete_button"):
         self.delete_button.setEnabled(True)
 
-    Tips.information_msg(error_msg)
+    Tips.info_msg(error_msg)
     if self.statusbar is not None:
         self.statusbar.showMessage("书籍修改失败，正在恢复数据……")
     self.request_all.emit()
